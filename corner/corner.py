@@ -515,10 +515,15 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
         Any additional keyword arguments to pass to the `plot` method when
         adding the individual data points.
 
+    Returns
+    -------
+    components : list of new plot components (e.g., contour, contourf)
     """
     if ax is None:
         ax = pl.gca()
 
+    components = []
+    
     # Set the default range based on the data range if not provided.
     if range is None:
         if "extent" in kwargs:
@@ -620,12 +625,14 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
         data_kwargs["ms"] = data_kwargs.get("ms", 2.0)
         data_kwargs["mec"] = data_kwargs.get("mec", "none")
         data_kwargs["alpha"] = data_kwargs.get("alpha", 0.1)
-        ax.plot(x, y, "o", zorder=-1, rasterized=True, **data_kwargs)
+        lines = ax.plot(x, y, "o", zorder=-1, rasterized=True, **data_kwargs)
+        components.append(lines)
 
     # Plot the base fill to hide the densest data points.
     if (plot_contours or plot_density) and not no_fill_contours:
-        ax.contourf(X2, Y2, H2.T, [V.min(), H.max()],
-                    cmap=white_cmap, antialiased=False)
+        contours = ax.contourf(X2, Y2, H2.T, [V.min(), H.max()],
+                               cmap=white_cmap, antialiased=False)
+        components.append(contours)
 
     if plot_contours and fill_contours:
         if contourf_kwargs is None:
@@ -633,20 +640,24 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
         contourf_kwargs["colors"] = contourf_kwargs.get("colors", contour_cmap)
         contourf_kwargs["antialiased"] = contourf_kwargs.get("antialiased",
                                                              False)
-        ax.contourf(X2, Y2, H2.T, np.concatenate([[0], V, [H.max()*(1+1e-4)]]),
-                    **contourf_kwargs)
+        contours = ax.contourf(X2, Y2, H2.T, np.concatenate([[0], V, [H.max()*(1+1e-4)]]),
+                               **contourf_kwargs)
+        components.append(contours)
 
     # Plot the density map. This can't be plotted at the same time as the
     # contour fills.
     elif plot_density:
-        ax.pcolor(X, Y, H.max() - H.T, cmap=density_cmap)
+        dm = ax.pcolor(X, Y, H.max() - H.T, cmap=density_cmap)
+        components.append(dm)
 
     # Plot the contour edge colors.
     if plot_contours:
         if contour_kwargs is None:
             contour_kwargs = dict()
         contour_kwargs["colors"] = contour_kwargs.get("colors", color)
-        ax.contour(X2, Y2, H2.T, V, **contour_kwargs)
+        contours = ax.contour(X2, Y2, H2.T, V, **contour_kwargs)
+        components.append(contours)
 
     ax.set_xlim(range[0])
     ax.set_ylim(range[1])
+    return components
